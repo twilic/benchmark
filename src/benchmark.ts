@@ -44,6 +44,7 @@ interface CliOptions {
   mode: BenchMode;
   recurramVsMsgpackOnly: boolean;
   markdownOut: string | null;
+  jsonOut: string | null;
 }
 
 function parseCliOptions(argv: string[]): CliOptions {
@@ -54,6 +55,7 @@ function parseCliOptions(argv: string[]): CliOptions {
     mode: "full",
     recurramVsMsgpackOnly: false,
     markdownOut: null,
+    jsonOut: null,
   };
 
   const options = { ...defaults };
@@ -103,6 +105,13 @@ function parseCliOptions(argv: string[]): CliOptions {
     if (arg === "--markdown-out" && argv[i + 1]) {
       options.markdownOut = argv[i + 1];
       i += 1;
+      continue;
+    }
+
+    if (arg === "--json-out" && argv[i + 1]) {
+      options.jsonOut = argv[i + 1];
+      i += 1;
+      continue;
     }
   }
 
@@ -208,7 +217,7 @@ function benchmarkToTransportValue(
     return { t: "binary", v: Buffer.from(value).toString("base64") };
   }
   if (Array.isArray(value)) {
-    const out = new Array<BenchmarkTransportValue>(value.length);
+    const out: BenchmarkTransportValue[] = Array.from({ length: value.length });
     for (let index = 0; index < value.length; index += 1) {
       out[index] = benchmarkToTransportValue(value[index]);
     }
@@ -229,7 +238,7 @@ function benchmarkToTransportValue(
 function benchmarkToTransportValues(
   values: RecurramValue[],
 ): BenchmarkTransportValue[] {
-  const out = new Array<BenchmarkTransportValue>(values.length);
+  const out: BenchmarkTransportValue[] = Array.from({ length: values.length });
   for (let index = 0; index < values.length; index += 1) {
     out[index] = benchmarkToTransportValue(values[index]);
   }
@@ -267,7 +276,7 @@ function benchmarkToCompactValue(value: RecurramValue): BenchmarkCompactValue {
     return [6, Buffer.from(value).toString("base64")];
   }
   if (Array.isArray(value)) {
-    const out = new Array<BenchmarkCompactValue>(value.length);
+    const out: BenchmarkCompactValue[] = Array.from({ length: value.length });
     for (let index = 0; index < value.length; index += 1) {
       out[index] = benchmarkToCompactValue(value[index]);
     }
@@ -279,7 +288,7 @@ function benchmarkToCompactValue(value: RecurramValue): BenchmarkCompactValue {
 
   const objectValue = value as Record<string, RecurramValue>;
   const keys = Object.keys(objectValue);
-  const flat = new Array(keys.length * 2);
+  const flat: unknown[] = Array.from({ length: keys.length * 2 });
   for (let index = 0; index < keys.length; index += 1) {
     flat[index * 2] = keys[index];
     flat[index * 2 + 1] = benchmarkToCompactValue(objectValue[keys[index]]);
@@ -292,7 +301,7 @@ function benchmarkSerializeCompact(value: RecurramValue): string {
 }
 
 function benchmarkSerializeCompactBatch(values: RecurramValue[]): string {
-  const out = new Array<BenchmarkCompactValue>(values.length);
+  const out: BenchmarkCompactValue[] = Array.from({ length: values.length });
   for (let index = 0; index < values.length; index += 1) {
     out[index] = benchmarkToCompactValue(values[index]);
   }
@@ -1123,6 +1132,32 @@ async function run(): Promise<void> {
       fastestHz,
     });
     fs.appendFileSync(options.markdownOut, `${md}\n\n`);
+  }
+
+  if (options.jsonOut) {
+    const payload = {
+      runtime,
+      backend: options.backend,
+      mode: options.mode,
+      timeMs: options.timeMs,
+      warmupMs: options.warmupMs,
+      includeJsonBaseline,
+      tasks: sortedTasks.map((task) => ({
+        name: task.name,
+        hz: task.result?.hz ?? 0,
+        rme: task.result?.rme ?? null,
+        samples: task.result?.samples?.length ?? null,
+      })),
+      sizes: sizeRows.map((row) => ({
+        payload: row.payload,
+        recurram: row.recurram,
+        msgpack: row.msgpack,
+        cbor: row.cbor,
+        bson: row.bson,
+        json: row.json,
+      })),
+    };
+    fs.writeFileSync(options.jsonOut, `${JSON.stringify(payload, null, 2)}\n`);
   }
 }
 
