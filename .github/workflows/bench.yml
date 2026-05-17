@@ -40,10 +40,10 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Checkout twilic-bench
+      - name: Checkout benchmark
         uses: actions/checkout@v4
         with:
-          path: workspace/twilic-bench
+          path: workspace/benchmark
 
       - name: Checkout twilic-js
         uses: actions/checkout@v4
@@ -69,7 +69,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: |
             workspace/twilic-js/pnpm-lock.yaml
-            workspace/twilic-bench/pnpm-lock.yaml
+            workspace/benchmark/pnpm-lock.yaml
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -84,11 +84,11 @@ jobs:
           pnpm build
 
       - name: Install bench dependencies
-        working-directory: workspace/twilic-bench
+        working-directory: workspace/benchmark
         run: pnpm install --frozen-lockfile
 
       - name: Run benchmark
-        working-directory: workspace/twilic-bench
+        working-directory: workspace/benchmark
         run: |
           set -euo pipefail
           extra=()
