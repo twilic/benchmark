@@ -1,5 +1,5 @@
 {
-  "name": "recurram-bench",
+  "name": "twilic-bench",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
   },
   "scripts": {
     "bench": "tsx src/benchmark.ts",
-    "bench:msgpack": "tsx src/benchmark.ts --recurram-vs-msgpack-only",
+    "bench:msgpack": "tsx src/benchmark.ts --twilic-vs-msgpack-only",
     "bench:max": "tsx src/benchmark.ts --mode max --backend napi --time-ms 3000 --warmup-ms 1000",
     "bench:wasm": "tsx src/benchmark.ts --backend wasm",
     "format": "prettier --write \"{README.md,package.json,tsconfig.json,src/**/*.ts}\"",
@@ -22,7 +22,7 @@
     "bson": "^7.2.0",
     "cbor-x": "^1.6.4",
     "cli-table3": "^0.6.5",
-    "recurram": "file:../recurram-js",
+    "twilic": "file:../twilic-js",
     "tinybench": "^2.9.0"
   },
   "devDependencies": {

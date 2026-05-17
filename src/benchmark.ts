@@ -31,8 +31,8 @@ import {
   toCompactJsonBatch,
   toTransportJson,
   toTransportJsonBatch,
-  type RecurramValue,
-} from "recurram/advanced";
+  type TwilicValue,
+} from "twilic/advanced";
 
 type BackendKind = "napi" | "wasm";
 type BenchMode = "full" | "max";
@@ -42,7 +42,7 @@ interface CliOptions {
   timeMs: number;
   warmupMs: number;
   mode: BenchMode;
-  recurramVsMsgpackOnly: boolean;
+  twilicVsMsgpackOnly: boolean;
   markdownOut: string | null;
   jsonOut: string | null;
 }
@@ -53,7 +53,7 @@ function parseCliOptions(argv: string[]): CliOptions {
     timeMs: 1000,
     warmupMs: 250,
     mode: "full",
-    recurramVsMsgpackOnly: false,
+    twilicVsMsgpackOnly: false,
     markdownOut: null,
     jsonOut: null,
   };
@@ -98,8 +98,8 @@ function parseCliOptions(argv: string[]): CliOptions {
       continue;
     }
 
-    if (arg === "--recurram-vs-msgpack-only") {
-      options.recurramVsMsgpackOnly = true;
+    if (arg === "--twilic-vs-msgpack-only") {
+      options.twilicVsMsgpackOnly = true;
     }
 
     if (arg === "--markdown-out" && argv[i + 1]) {
@@ -119,16 +119,16 @@ function parseCliOptions(argv: string[]): CliOptions {
 }
 
 interface Dataset {
-  singleSmall: RecurramValue;
+  singleSmall: TwilicValue;
   singleSmallJson: Record<string, unknown>;
-  batchHomogeneous: RecurramValue[];
+  batchHomogeneous: TwilicValue[];
   batchHomogeneousJson: unknown[];
-  batchMixed: RecurramValue[];
+  batchMixed: TwilicValue[];
   batchMixedJson: unknown[];
   patchSession: {
-    first: RecurramValue;
-    nextA: RecurramValue;
-    nextB: RecurramValue;
+    first: TwilicValue;
+    nextA: TwilicValue;
+    nextB: TwilicValue;
     firstTransport: string;
     nextATransport: string;
     nextBTransport: string;
@@ -181,7 +181,7 @@ function formatReduction(smaller: number, larger: number): string {
 }
 
 function benchmarkToTransportValue(
-  value: RecurramValue,
+  value: TwilicValue,
 ): BenchmarkTransportValue {
   if (value === null) {
     return { t: "null" };
@@ -228,7 +228,7 @@ function benchmarkToTransportValue(
   }
 
   const entries: Array<[string, BenchmarkTransportValue]> = [];
-  const objectValue = value as Record<string, RecurramValue>;
+  const objectValue = value as Record<string, TwilicValue>;
   for (const key of Object.keys(objectValue)) {
     entries.push([key, benchmarkToTransportValue(objectValue[key])]);
   }
@@ -236,7 +236,7 @@ function benchmarkToTransportValue(
 }
 
 function benchmarkToTransportValues(
-  values: RecurramValue[],
+  values: TwilicValue[],
 ): BenchmarkTransportValue[] {
   const out: BenchmarkTransportValue[] = Array.from({ length: values.length });
   for (let index = 0; index < values.length; index += 1) {
@@ -245,7 +245,7 @@ function benchmarkToTransportValues(
   return out;
 }
 
-function benchmarkToCompactValue(value: RecurramValue): BenchmarkCompactValue {
+function benchmarkToCompactValue(value: TwilicValue): BenchmarkCompactValue {
   if (value === null) {
     return [0];
   }
@@ -286,7 +286,7 @@ function benchmarkToCompactValue(value: RecurramValue): BenchmarkCompactValue {
     throw new Error("unsupported value type");
   }
 
-  const objectValue = value as Record<string, RecurramValue>;
+  const objectValue = value as Record<string, TwilicValue>;
   const keys = Object.keys(objectValue);
   const flat: unknown[] = Array.from({ length: keys.length * 2 });
   for (let index = 0; index < keys.length; index += 1) {
@@ -296,11 +296,11 @@ function benchmarkToCompactValue(value: RecurramValue): BenchmarkCompactValue {
   return [8, flat];
 }
 
-function benchmarkSerializeCompact(value: RecurramValue): string {
+function benchmarkSerializeCompact(value: TwilicValue): string {
   return JSON.stringify(benchmarkToCompactValue(value));
 }
 
-function benchmarkSerializeCompactBatch(values: RecurramValue[]): string {
+function benchmarkSerializeCompactBatch(values: TwilicValue[]): string {
   const out: BenchmarkCompactValue[] = Array.from({ length: values.length });
   for (let index = 0; index < values.length; index += 1) {
     out[index] = benchmarkToCompactValue(values[index]);
@@ -308,7 +308,7 @@ function benchmarkSerializeCompactBatch(values: RecurramValue[]): string {
   return JSON.stringify(out);
 }
 
-function makeSingleSmallDataset(): RecurramValue {
+function makeSingleSmallDataset(): TwilicValue {
   return {
     id: 1234,
     userId: 987654,
@@ -324,7 +324,7 @@ function makeSingleSmallDataset(): RecurramValue {
   };
 }
 
-function makeBatchHomogeneousDataset(): RecurramValue[] {
+function makeBatchHomogeneousDataset(): TwilicValue[] {
   return Array.from({ length: 256 }, (_, index) => {
     const id = index + 1;
     return {
@@ -341,12 +341,12 @@ function makeBatchHomogeneousDataset(): RecurramValue[] {
   });
 }
 
-function makeBatchMixedDataset(): RecurramValue[] {
+function makeBatchMixedDataset(): TwilicValue[] {
   return Array.from({ length: 256 }, (_, index) => {
     const id = index + 1;
     const kind = index % 4;
     if (kind === 0) {
-      const value: RecurramValue = {
+      const value: TwilicValue = {
         id,
         tenant: `tenant-${(id % 11) + 1}`,
         active: id % 2 === 0,
@@ -360,7 +360,7 @@ function makeBatchMixedDataset(): RecurramValue[] {
       return value;
     }
     if (kind === 1) {
-      const value: RecurramValue = {
+      const value: TwilicValue = {
         id,
         user: {
           name: `user-${id}`,
@@ -373,7 +373,7 @@ function makeBatchMixedDataset(): RecurramValue[] {
       return value;
     }
     if (kind === 2) {
-      const value: RecurramValue = {
+      const value: TwilicValue = {
         id,
         flags: [id % 2 === 0, id % 3 === 0, id % 5 === 0],
         payload: {
@@ -387,7 +387,7 @@ function makeBatchMixedDataset(): RecurramValue[] {
       };
       return value;
     }
-    const value: RecurramValue = {
+    const value: TwilicValue = {
       id,
       event: `event-${id % 13}`,
       source: `source-${id % 9}`,
@@ -405,7 +405,7 @@ function buildDataset(): Dataset {
   const singleSmall = makeSingleSmallDataset();
   const batchHomogeneous = makeBatchHomogeneousDataset();
   const batchMixed = makeBatchMixedDataset();
-  const patchSessionFirst: RecurramValue = {
+  const patchSessionFirst: TwilicValue = {
     id: 9001,
     status: "active",
     score: 99.1,
@@ -415,7 +415,7 @@ function buildDataset(): Dataset {
       timeZone: "Asia/Tokyo",
     },
   };
-  const patchSessionNextA: RecurramValue = {
+  const patchSessionNextA: TwilicValue = {
     id: 9001,
     status: "active",
     score: 99.2,
@@ -425,7 +425,7 @@ function buildDataset(): Dataset {
       timeZone: "Asia/Seoul",
     },
   };
-  const patchSessionNextB: RecurramValue = {
+  const patchSessionNextB: TwilicValue = {
     id: 9001,
     status: "active",
     score: 99.3,
@@ -471,7 +471,7 @@ function escapeMarkdownCell(value: string): string {
 
 interface SizeRowData {
   payload: string;
-  recurram: number;
+  twilic: number;
   msgpack: number;
   cbor: number;
   bson: number;
@@ -496,12 +496,12 @@ function buildMarkdownReport(params: {
   } = params;
 
   const lines: string[] = [
-    "## Recurram benchmark",
+    "## Twilic benchmark",
     "",
     `- **Runtime:** ${runtime}`,
     `- **Backend preference:** ${options.backend}`,
     `- **Mode:** ${options.mode}`,
-    `- **Baselines:** ${includeJsonBaseline ? "recurram, msgpack, json" : "recurram, msgpack"}`,
+    `- **Baselines:** ${includeJsonBaseline ? "twilic, msgpack, json" : "twilic, msgpack"}`,
     `- **Time per task:** ${options.timeMs} ms`,
     `- **Warmup per task:** ${options.warmupMs} ms`,
     "",
@@ -511,7 +511,7 @@ function buildMarkdownReport(params: {
 
   const sizeHead = [
     "payload",
-    "recurram (bytes)",
+    "twilic (bytes)",
     "msgpack (bytes)",
     "cbor (bytes)",
     "bson (bytes)",
@@ -529,7 +529,7 @@ function buildMarkdownReport(params: {
   for (const row of sizeRows) {
     const cells = [
       escapeMarkdownCell(row.payload),
-      formatBytes(row.recurram),
+      formatBytes(row.twilic),
       formatBytes(row.msgpack),
       formatBytes(row.cbor),
       formatBytes(row.bson),
@@ -538,12 +538,12 @@ function buildMarkdownReport(params: {
       cells.push(formatBytes(row.json));
     }
     cells.push(
-      formatReduction(row.recurram, row.msgpack),
-      formatReduction(row.recurram, row.cbor),
-      formatReduction(row.recurram, row.bson),
+      formatReduction(row.twilic, row.msgpack),
+      formatReduction(row.twilic, row.cbor),
+      formatReduction(row.twilic, row.bson),
     );
     if (includeJsonBaseline) {
-      cells.push(formatReduction(row.recurram, row.json));
+      cells.push(formatReduction(row.twilic, row.json));
     }
     lines.push("| " + cells.join(" | ") + " |");
   }
@@ -578,30 +578,30 @@ function toJsonBytes(value: unknown): Uint8Array {
 async function run(): Promise<void> {
   const options = parseCliOptions(process.argv.slice(2));
   const runtime = await init({ prefer: options.backend });
-  const includeJsonBaseline = !options.recurramVsMsgpackOnly;
+  const includeJsonBaseline = !options.twilicVsMsgpackOnly;
   const dataset = buildDataset();
   const singleSmallJson = dataset.singleSmallJson;
   const batchHomogeneousJson = dataset.batchHomogeneousJson;
   const batchMixedJson = dataset.batchMixedJson;
   const patchSession = dataset.patchSession;
 
-  const recurramEncodedSingle = encode(dataset.singleSmall);
-  const recurramEncodedBatchHomogeneous = encodeBatch(dataset.batchHomogeneous);
-  const recurramEncodedBatchMixed = encodeBatch(dataset.batchMixed);
-  const recurramEncodedSingles = dataset.batchHomogeneous.map((value) =>
+  const twilicEncodedSingle = encode(dataset.singleSmall);
+  const twilicEncodedBatchHomogeneous = encodeBatch(dataset.batchHomogeneous);
+  const twilicEncodedBatchMixed = encodeBatch(dataset.batchMixed);
+  const twilicEncodedSingles = dataset.batchHomogeneous.map((value) =>
     encode(value),
   );
-  const recurramTransportSingle = toTransportJson(dataset.singleSmall);
-  const recurramTransportBatchHomogeneous = toTransportJsonBatch(
+  const twilicTransportSingle = toTransportJson(dataset.singleSmall);
+  const twilicTransportBatchHomogeneous = toTransportJsonBatch(
     dataset.batchHomogeneous,
   );
-  const recurramTransportBatchMixed = toTransportJsonBatch(dataset.batchMixed);
-  const recurramCompactSingle = toCompactJson(dataset.singleSmall);
-  const recurramCompactBatchHomogeneous = toCompactJsonBatch(
+  const twilicTransportBatchMixed = toTransportJsonBatch(dataset.batchMixed);
+  const twilicCompactSingle = toCompactJson(dataset.singleSmall);
+  const twilicCompactBatchHomogeneous = toCompactJsonBatch(
     dataset.batchHomogeneous,
   );
-  const recurramCompactBatchMixed = toCompactJsonBatch(dataset.batchMixed);
-  const recurramEncodedSingleRaw = encodeTransportJson(recurramTransportSingle);
+  const twilicCompactBatchMixed = toCompactJsonBatch(dataset.batchMixed);
+  const twilicEncodedSingleRaw = encodeTransportJson(twilicTransportSingle);
   const jsonEncodedSingle = toJsonBytes(singleSmallJson);
   const jsonEncodedBatchHomogeneous = toJsonBytes(batchHomogeneousJson);
   const jsonEncodedBatchMixed = toJsonBytes(batchMixedJson);
@@ -632,7 +632,7 @@ async function run(): Promise<void> {
     jsonEncodedBatchHomogeneous,
   );
   const jsonBatchMixedText = new TextDecoder().decode(jsonEncodedBatchMixed);
-  const recurramEncodedPatchSessionFirst = encode(patchSession.first);
+  const twilicEncodedPatchSessionFirst = encode(patchSession.first);
 
   const sessionEncoder = createSessionEncoder({
     enableStatePatch: true,
@@ -691,26 +691,26 @@ async function run(): Promise<void> {
 
   if (options.mode === "max") {
     bench
-      .add("recurram encode single-small (direct)", () => {
+      .add("twilic encode single-small (direct)", () => {
         encodeDirect(dataset.singleSmall);
       })
-      .add("recurram encode single-small (raw json)", () => {
-        encodeTransportJson(recurramTransportSingle);
+      .add("twilic encode single-small (raw json)", () => {
+        encodeTransportJson(twilicTransportSingle);
       })
-      .add("recurram encode single-small (compact)", () => {
+      .add("twilic encode single-small (compact)", () => {
         encodeCompact(dataset.singleSmall);
       })
-      .add("recurram encode single-small (compact raw)", () => {
-        encodeCompactJson(recurramCompactSingle);
+      .add("twilic encode single-small (compact raw)", () => {
+        encodeCompactJson(twilicCompactSingle);
       })
-      .add("recurram decode single-small (direct)", () => {
-        decodeDirect(recurramEncodedSingleRaw);
+      .add("twilic decode single-small (direct)", () => {
+        decodeDirect(twilicEncodedSingleRaw);
       })
-      .add("recurram decode single-small (raw json)", () => {
-        decodeToTransportJson(recurramEncodedSingleRaw);
+      .add("twilic decode single-small (raw json)", () => {
+        decodeToTransportJson(twilicEncodedSingleRaw);
       })
-      .add("recurram decode single-small (compact raw)", () => {
-        decodeToCompactJson(recurramEncodedSingleRaw);
+      .add("twilic decode single-small (compact raw)", () => {
+        decodeToCompactJson(twilicEncodedSingleRaw);
       })
       .add("msgpack encode single-small", () => {
         encodeMsgpack(singleSmallJson);
@@ -730,17 +730,17 @@ async function run(): Promise<void> {
       .add("bson deserialize single-small", () => {
         deserializeBson(bsonEncodedSingle);
       })
-      .add("recurram encode batch-homogeneous-256 (direct)", () => {
+      .add("twilic encode batch-homogeneous-256 (direct)", () => {
         encodeBatchDirect(dataset.batchHomogeneous);
       })
-      .add("recurram encode batch-homogeneous-256 (raw json)", () => {
-        encodeBatchTransportJson(recurramTransportBatchHomogeneous);
+      .add("twilic encode batch-homogeneous-256 (raw json)", () => {
+        encodeBatchTransportJson(twilicTransportBatchHomogeneous);
       })
-      .add("recurram encode batch-homogeneous-256 (compact)", () => {
+      .add("twilic encode batch-homogeneous-256 (compact)", () => {
         encodeBatchCompact(dataset.batchHomogeneous);
       })
-      .add("recurram encode batch-homogeneous-256 (compact raw)", () => {
-        encodeBatchCompactJson(recurramCompactBatchHomogeneous);
+      .add("twilic encode batch-homogeneous-256 (compact raw)", () => {
+        encodeBatchCompactJson(twilicCompactBatchHomogeneous);
       })
       .add("msgpack encode batch-homogeneous-256", () => {
         encodeMsgpack(batchHomogeneousJson);
@@ -766,17 +766,17 @@ async function run(): Promise<void> {
           deserializeBson(encoded);
         }
       })
-      .add("recurram encode batch-mixed-256 (direct)", () => {
+      .add("twilic encode batch-mixed-256 (direct)", () => {
         encodeBatchDirect(dataset.batchMixed);
       })
-      .add("recurram encode batch-mixed-256 (raw json)", () => {
-        encodeBatchTransportJson(recurramTransportBatchMixed);
+      .add("twilic encode batch-mixed-256 (raw json)", () => {
+        encodeBatchTransportJson(twilicTransportBatchMixed);
       })
-      .add("recurram encode batch-mixed-256 (compact)", () => {
+      .add("twilic encode batch-mixed-256 (compact)", () => {
         encodeBatchCompact(dataset.batchMixed);
       })
-      .add("recurram encode batch-mixed-256 (compact raw)", () => {
-        encodeBatchCompactJson(recurramCompactBatchMixed);
+      .add("twilic encode batch-mixed-256 (compact raw)", () => {
+        encodeBatchCompactJson(twilicCompactBatchMixed);
       })
       .add("msgpack encode batch-mixed-256", () => {
         encodeMsgpack(batchMixedJson);
@@ -787,13 +787,13 @@ async function run(): Promise<void> {
       .add("bson serialize batch-mixed-256", () => {
         serializeBson({ records: batchMixedJson });
       })
-      .add("recurram patch session-hot (direct)", () => {
+      .add("twilic patch session-hot (direct)", () => {
         patchFlipDirect = !patchFlipDirect;
         directSessionEncoder.encodePatchDirect(
           patchFlipDirect ? patchSession.nextA : patchSession.nextB,
         );
       })
-      .add("recurram patch session-hot (raw json)", () => {
+      .add("twilic patch session-hot (raw json)", () => {
         patchFlipRaw = !patchFlipRaw;
         rawSessionEncoder.encodePatchTransportJson(
           patchFlipRaw
@@ -801,13 +801,13 @@ async function run(): Promise<void> {
             : patchSession.nextBTransport,
         );
       })
-      .add("recurram patch session-hot (compact)", () => {
+      .add("twilic patch session-hot (compact)", () => {
         patchFlipCompact = !patchFlipCompact;
         compactSessionEncoder.encodePatchCompact(
           patchFlipCompact ? patchSession.nextA : patchSession.nextB,
         );
       })
-      .add("recurram patch session-hot (compact raw)", () => {
+      .add("twilic patch session-hot (compact raw)", () => {
         patchFlipCompactRaw = !patchFlipCompactRaw;
         compactSessionEncoder.encodePatchCompactJson(
           patchFlipCompactRaw
@@ -817,32 +817,32 @@ async function run(): Promise<void> {
       });
   } else {
     bench
-      .add("recurram encode single-small", () => {
+      .add("twilic encode single-small", () => {
         encode(dataset.singleSmall);
       })
-      .add("recurram encode single-small (direct)", () => {
+      .add("twilic encode single-small (direct)", () => {
         encodeDirect(dataset.singleSmall);
       })
-      .add("recurram encode single-small (raw json)", () => {
-        encodeTransportJson(recurramTransportSingle);
+      .add("twilic encode single-small (raw json)", () => {
+        encodeTransportJson(twilicTransportSingle);
       })
-      .add("recurram encode single-small (compact)", () => {
+      .add("twilic encode single-small (compact)", () => {
         encodeCompact(dataset.singleSmall);
       })
-      .add("recurram encode single-small (compact raw)", () => {
-        encodeCompactJson(recurramCompactSingle);
+      .add("twilic encode single-small (compact raw)", () => {
+        encodeCompactJson(twilicCompactSingle);
       })
-      .add("recurram decode single-small", () => {
-        decode(recurramEncodedSingle);
+      .add("twilic decode single-small", () => {
+        decode(twilicEncodedSingle);
       })
-      .add("recurram decode single-small (direct)", () => {
-        decodeDirect(recurramEncodedSingleRaw);
+      .add("twilic decode single-small (direct)", () => {
+        decodeDirect(twilicEncodedSingleRaw);
       })
-      .add("recurram decode single-small (raw json)", () => {
-        decodeToTransportJson(recurramEncodedSingleRaw);
+      .add("twilic decode single-small (raw json)", () => {
+        decodeToTransportJson(twilicEncodedSingleRaw);
       })
-      .add("recurram decode single-small (compact raw)", () => {
-        decodeToCompactJson(recurramEncodedSingleRaw);
+      .add("twilic decode single-small (compact raw)", () => {
+        decodeToCompactJson(twilicEncodedSingleRaw);
       })
       .add("msgpack encode single-small", () => {
         encodeMsgpack(singleSmallJson);
@@ -862,23 +862,23 @@ async function run(): Promise<void> {
       .add("bson deserialize single-small", () => {
         deserializeBson(bsonEncodedSingle);
       })
-      .add("recurram encode batch-homogeneous-256", () => {
+      .add("twilic encode batch-homogeneous-256", () => {
         encodeBatch(dataset.batchHomogeneous);
       })
-      .add("recurram encode batch-homogeneous-256 (direct)", () => {
+      .add("twilic encode batch-homogeneous-256 (direct)", () => {
         encodeBatchDirect(dataset.batchHomogeneous);
       })
-      .add("recurram encode batch-homogeneous-256 (raw json)", () => {
-        encodeBatchTransportJson(recurramTransportBatchHomogeneous);
+      .add("twilic encode batch-homogeneous-256 (raw json)", () => {
+        encodeBatchTransportJson(twilicTransportBatchHomogeneous);
       })
-      .add("recurram encode batch-homogeneous-256 (compact)", () => {
+      .add("twilic encode batch-homogeneous-256 (compact)", () => {
         encodeBatchCompact(dataset.batchHomogeneous);
       })
-      .add("recurram encode batch-homogeneous-256 (compact raw)", () => {
-        encodeBatchCompactJson(recurramCompactBatchHomogeneous);
+      .add("twilic encode batch-homogeneous-256 (compact raw)", () => {
+        encodeBatchCompactJson(twilicCompactBatchHomogeneous);
       })
-      .add("recurram decode 256 singles", () => {
-        for (const encoded of recurramEncodedSingles) {
+      .add("twilic decode 256 singles", () => {
+        for (const encoded of twilicEncodedSingles) {
           decode(encoded);
         }
       })
@@ -906,20 +906,20 @@ async function run(): Promise<void> {
           deserializeBson(encoded);
         }
       })
-      .add("recurram encode batch-mixed-256", () => {
+      .add("twilic encode batch-mixed-256", () => {
         encodeBatch(dataset.batchMixed);
       })
-      .add("recurram encode batch-mixed-256 (direct)", () => {
+      .add("twilic encode batch-mixed-256 (direct)", () => {
         encodeBatchDirect(dataset.batchMixed);
       })
-      .add("recurram encode batch-mixed-256 (raw json)", () => {
-        encodeBatchTransportJson(recurramTransportBatchMixed);
+      .add("twilic encode batch-mixed-256 (raw json)", () => {
+        encodeBatchTransportJson(twilicTransportBatchMixed);
       })
-      .add("recurram encode batch-mixed-256 (compact)", () => {
+      .add("twilic encode batch-mixed-256 (compact)", () => {
         encodeBatchCompact(dataset.batchMixed);
       })
-      .add("recurram encode batch-mixed-256 (compact raw)", () => {
-        encodeBatchCompactJson(recurramCompactBatchMixed);
+      .add("twilic encode batch-mixed-256 (compact raw)", () => {
+        encodeBatchCompactJson(twilicCompactBatchMixed);
       })
       .add("msgpack encode batch-mixed-256", () => {
         encodeMsgpack(batchMixedJson);
@@ -930,19 +930,19 @@ async function run(): Promise<void> {
       .add("bson serialize batch-mixed-256", () => {
         serializeBson({ records: batchMixedJson });
       })
-      .add("recurram patch session-hot", () => {
+      .add("twilic patch session-hot", () => {
         patchFlip = !patchFlip;
         sessionEncoder.encodePatch(
           patchFlip ? patchSession.nextA : patchSession.nextB,
         );
       })
-      .add("recurram patch session-hot (direct)", () => {
+      .add("twilic patch session-hot (direct)", () => {
         patchFlipDirect = !patchFlipDirect;
         directSessionEncoder.encodePatchDirect(
           patchFlipDirect ? patchSession.nextA : patchSession.nextB,
         );
       })
-      .add("recurram patch session-hot (raw json)", () => {
+      .add("twilic patch session-hot (raw json)", () => {
         patchFlipRaw = !patchFlipRaw;
         rawSessionEncoder.encodePatchTransportJson(
           patchFlipRaw
@@ -950,13 +950,13 @@ async function run(): Promise<void> {
             : patchSession.nextBTransport,
         );
       })
-      .add("recurram patch session-hot (compact)", () => {
+      .add("twilic patch session-hot (compact)", () => {
         patchFlipCompact = !patchFlipCompact;
         compactSessionEncoder.encodePatchCompact(
           patchFlipCompact ? patchSession.nextA : patchSession.nextB,
         );
       })
-      .add("recurram patch session-hot (compact raw)", () => {
+      .add("twilic patch session-hot (compact raw)", () => {
         patchFlipCompactRaw = !patchFlipCompactRaw;
         compactSessionEncoder.encodePatchCompactJson(
           patchFlipCompactRaw
@@ -992,7 +992,7 @@ async function run(): Promise<void> {
 
   const sizeTableHead = [
     "payload",
-    "recurram (bytes)",
+    "twilic (bytes)",
     "msgpack (bytes)",
     "cbor (bytes)",
     "bson (bytes)",
@@ -1016,7 +1016,7 @@ async function run(): Promise<void> {
   const sizeRows = [
     {
       payload: "single-small",
-      recurram: recurramEncodedSingle.byteLength,
+      twilic: twilicEncodedSingle.byteLength,
       msgpack: msgpackEncodedSingle.byteLength,
       cbor: cborEncodedSingle.byteLength,
       bson: bsonEncodedSingle.byteLength,
@@ -1024,7 +1024,7 @@ async function run(): Promise<void> {
     },
     {
       payload: "batch-homogeneous-256",
-      recurram: recurramEncodedBatchHomogeneous.byteLength,
+      twilic: twilicEncodedBatchHomogeneous.byteLength,
       msgpack: msgpackEncodedBatchHomogeneous.byteLength,
       cbor: cborEncodedBatchHomogeneous.byteLength,
       bson: bsonEncodedBatchHomogeneous.byteLength,
@@ -1032,7 +1032,7 @@ async function run(): Promise<void> {
     },
     {
       payload: "batch-mixed-256",
-      recurram: recurramEncodedBatchMixed.byteLength,
+      twilic: twilicEncodedBatchMixed.byteLength,
       msgpack: msgpackEncodedBatchMixed.byteLength,
       cbor: cborEncodedBatchMixed.byteLength,
       bson: bsonEncodedBatchMixed.byteLength,
@@ -1040,7 +1040,7 @@ async function run(): Promise<void> {
     },
     {
       payload: "session-patch-hot (first)",
-      recurram: recurramEncodedPatchSessionFirst.byteLength,
+      twilic: twilicEncodedPatchSessionFirst.byteLength,
       msgpack: encodeMsgpack(patchSession.first as Record<string, unknown>)
         .byteLength,
       cbor: encodeCbor(patchSession.first as Record<string, unknown>)
@@ -1055,7 +1055,7 @@ async function run(): Promise<void> {
   for (const row of sizeRows) {
     const tableRow = [
       row.payload,
-      formatBytes(row.recurram),
+      formatBytes(row.twilic),
       formatBytes(row.msgpack),
       formatBytes(row.cbor),
       formatBytes(row.bson),
@@ -1066,13 +1066,13 @@ async function run(): Promise<void> {
     }
 
     tableRow.push(
-      formatReduction(row.recurram, row.msgpack),
-      formatReduction(row.recurram, row.cbor),
-      formatReduction(row.recurram, row.bson),
+      formatReduction(row.twilic, row.msgpack),
+      formatReduction(row.twilic, row.cbor),
+      formatReduction(row.twilic, row.bson),
     );
 
     if (includeJsonBaseline) {
-      tableRow.push(formatReduction(row.recurram, row.json));
+      tableRow.push(formatReduction(row.twilic, row.json));
     }
 
     sizeTable.push(tableRow);
@@ -1106,12 +1106,12 @@ async function run(): Promise<void> {
     ]);
   }
 
-  console.log("Recurram benchmark");
+  console.log("Twilic benchmark");
   console.log(`runtime: ${runtime}`);
   console.log(`backend preference: ${options.backend}`);
   console.log(`mode: ${options.mode}`);
   console.log(
-    `baseline view: ${includeJsonBaseline ? "recurram, msgpack, json" : "recurram, msgpack"}`,
+    `baseline view: ${includeJsonBaseline ? "twilic, msgpack, json" : "twilic, msgpack"}`,
   );
   console.log(`time per task: ${options.timeMs} ms`);
   console.log(`warmup per task: ${options.warmupMs} ms`);
@@ -1150,7 +1150,7 @@ async function run(): Promise<void> {
       })),
       sizes: sizeRows.map((row) => ({
         payload: row.payload,
-        recurram: row.recurram,
+        twilic: row.twilic,
         msgpack: row.msgpack,
         cbor: row.cbor,
         bson: row.bson,

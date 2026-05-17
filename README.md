@@ -1,6 +1,6 @@
-# Recurram Benchmark
+# Twilic Benchmark
 
-TypeScript benchmark harness for `recurram` (`recurram-js` local package).
+TypeScript benchmark harness for `twilic` (`twilic-js` local package).
 
 ## Setup
 
@@ -8,10 +8,10 @@ TypeScript benchmark harness for `recurram` (`recurram-js` local package).
 pnpm install
 ```
 
-`recurram` is consumed from `../recurram-js` via a local file dependency. If the native/WASM artifacts are stale, rebuild `recurram-js` first:
+`twilic` is consumed from `../twilic-js` via a local file dependency. If the native/WASM artifacts are stale, rebuild `twilic-js` first:
 
 ```bash
-pnpm --dir ../recurram-js build
+pnpm --dir ../twilic-js build
 ```
 
 ## Run benchmark
@@ -28,26 +28,26 @@ Optional flags:
 - `--time-ms <number>` (default: `1000`)
 - `--warmup-ms <number>` (default: `250`)
 - `--mode full|max` (default: `full`)
-- `--recurram-vs-msgpack-only` (hide JSON rows and JSON benchmark tasks)
+- `--twilic-vs-msgpack-only` (hide JSON rows and JSON benchmark tasks)
 
 Examples:
 
 ```bash
 pnpm bench -- --backend napi
-pnpm bench -- --recurram-vs-msgpack-only
+pnpm bench -- --twilic-vs-msgpack-only
 pnpm bench -- --mode max --backend napi
 pnpm bench -- --backend wasm --time-ms 2000 --warmup-ms 500
 ```
 
 ## What is measured
 
-- Recurram encode/decode for a single record
-- Recurram encode/decode for a 256-record batch
+- Twilic encode/decode for a single record
+- Twilic encode/decode for a 256-record batch
 - MessagePack encode/decode baselines for single and batched payloads
-- Recurram session patch encode (`encodePatch`)
+- Twilic session patch encode (`encodePatch`)
 - Raw transport-json fast path (`encodeTransportJson`, `encodeBatchTransportJson`, `decodeToTransportJson`)
 - JSON stringify/parse baseline for a comparable payload
-- Encoded payload size comparison (`recurram` vs MessagePack vs JSON)
+- Encoded payload size comparison (`twilic` vs MessagePack vs JSON)
 - Pretty CLI tables for size and throughput output (`cli-table3`)
 
 ## Max speed tips

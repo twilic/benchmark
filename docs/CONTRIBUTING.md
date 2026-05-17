@@ -1,21 +1,21 @@
 # Contributing
 
-Thank you for improving the Recurram benchmark harness.
+Thank you for improving the Twilic benchmark harness.
 
 ## Scope
 
-This repository measures encode/decode performance for `recurram-js` and comparison formats. Changes should keep benchmark scenarios reproducible and documented in `README.md`.
+This repository measures encode/decode performance for `twilic-js` and comparison formats. Changes should keep benchmark scenarios reproducible and documented in `README.md`.
 
 ## Development
 
 Requirements:
 
 - Node.js 24+
-- A built `recurram-js` package at `../recurram-js`
+- A built `twilic-js` package at `../twilic-js`
 
 ```bash
 pnpm install
-pnpm --dir ../recurram-js build
+pnpm --dir ../twilic-js build
 pnpm bench
 pnpm typecheck
 pnpm format

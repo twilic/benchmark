@@ -20,9 +20,9 @@ importers:
       cli-table3:
         specifier: ^0.6.5
         version: 0.6.5
-      recurram:
-        specifier: file:../recurram-js
-        version: file:../recurram-js
+      twilic:
+        specifier: file:../twilic-js
+        version: file:../twilic-js
       tinybench:
         specifier: ^2.9.0
         version: 2.9.0
@@ -604,8 +604,8 @@ packages:
     engines: {node: '>=14'}
     hasBin: true
 
-  recurram@file:../recurram-js:
-    resolution: {directory: ../recurram-js, type: directory}
+  twilic@file:../twilic-js:
+    resolution: {directory: ../twilic-js, type: directory}
     engines: {node: '>=24'}
 
   require-directory@2.1.1:
@@ -1192,7 +1192,7 @@ snapshots:
 
   prettier@3.8.1: {}
 
-  recurram@file:../recurram-js: {}
+  twilic@file:../twilic-js: {}
 
   require-directory@2.1.1: {}
 
