@@ -1,6 +1,6 @@
 # Twilic Benchmark
 
-TypeScript benchmark harness for `twilic` (`twilic-js` local package).
+TypeScript benchmark harness for `@twilic/core` (`twilic-js` local package).
 
 ## Setup
 
@@ -8,7 +8,7 @@ TypeScript benchmark harness for `twilic` (`twilic-js` local package).
 pnpm install
 ```
 
-`twilic` is consumed from `../twilic-js` via a local file dependency. If the native/WASM artifacts are stale, rebuild `twilic-js` first:
+`@twilic/core` is consumed from `../twilic-js` via a local file dependency. If the native/WASM artifacts are stale, rebuild `twilic-js` first:
 
 ```bash
 pnpm --dir ../twilic-js build

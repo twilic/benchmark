@@ -32,7 +32,7 @@ import {
   toTransportJson,
   toTransportJsonBatch,
   type TwilicValue,
-} from "twilic/advanced";
+} from "@twilic/core/advanced";
 
 type BackendKind = "napi" | "wasm";
 type BenchMode = "full" | "max";

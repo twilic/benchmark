@@ -22,7 +22,7 @@
     "bson": "^7.2.0",
     "cbor-x": "^1.6.4",
     "cli-table3": "^0.6.5",
-    "twilic": "file:../twilic-js",
+    "@twilic/core": "file:../twilic-js",
     "tinybench": "^2.9.0"
   },
   "devDependencies": {
