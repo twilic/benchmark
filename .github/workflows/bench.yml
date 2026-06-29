@@ -95,16 +95,29 @@ jobs:
 
       - name: Run benchmark
         working-directory: workspace/benchmark
+        env:
+          BACKEND: ${{ inputs.backend }}
+          MODE: ${{ inputs.mode }}
+          TIME_MS: ${{ inputs.time_ms }}
+          WARMUP_MS: ${{ inputs.warmup_ms }}
+          TWILIC_VS_MSGPACK_ONLY: ${{ inputs.twilic_vs_msgpack_only }}
         run: |
           set -euo pipefail
+          for var in TIME_MS WARMUP_MS; do
+            value="${!var}"
+            if ! [[ "$value" =~ ^[0-9]+$ ]]; then
+              echo "$var must be a positive integer, got: $value" >&2
+              exit 1
+            fi
+          done
           extra=()
-          if [ "${{ inputs.twilic_vs_msgpack_only }}" = "true" ]; then
+          if [ "$TWILIC_VS_MSGPACK_ONLY" = "true" ]; then
             extra+=(--twilic-vs-msgpack-only)
           fi
           pnpm exec tsx src/benchmark.ts \
             --markdown-out "${GITHUB_STEP_SUMMARY}" \
-            --backend "${{ inputs.backend }}" \
-            --mode "${{ inputs.mode }}" \
-            --time-ms "${{ inputs.time_ms }}" \
-            --warmup-ms "${{ inputs.warmup_ms }}" \
+            --backend "$BACKEND" \
+            --mode "$MODE" \
+            --time-ms "$TIME_MS" \
+            --warmup-ms "$WARMUP_MS" \
             "${extra[@]}"
