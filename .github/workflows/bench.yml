@@ -34,6 +34,9 @@ concurrency:
   group: bench-${{ github.repository }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   bench:
     runs-on: ubuntu-latest
@@ -44,18 +47,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: workspace/benchmark
+          persist-credentials: false
 
       - name: Checkout twilic-js
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/twilic-js
           path: workspace/twilic-js
+          persist-credentials: false
 
       - name: Checkout twilic-rust
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/twilic-rust
           path: workspace/twilic-rust
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
