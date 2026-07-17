@@ -31,8 +31,14 @@ import {
   toCompactJsonBatch,
   toTransportJson,
   toTransportJsonBatch,
+  type Schema,
   type TwilicValue,
 } from "@twilic/core/advanced";
+import {
+  encodeAvroStream,
+  encodeProtobufStream,
+  makeSchemaUserRecordBatch,
+} from "./schema-codecs.js";
 
 type BackendKind = "napi" | "wasm";
 type BenchMode = "full" | "max";
@@ -478,6 +484,13 @@ interface SizeRowData {
   json: number;
 }
 
+interface SchemaSizeRowData {
+  payload: string;
+  twilicBound: number;
+  protobuf: number;
+  avro: number;
+}
+
 function buildMarkdownReport(params: {
   runtime: string;
   options: CliOptions;
@@ -485,6 +498,7 @@ function buildMarkdownReport(params: {
   sizeRows: SizeRowData[];
   sortedTasks: { name: string; result?: { hz?: number; rme?: number } }[];
   fastestHz: number;
+  schemaSizeRows: SchemaSizeRowData[];
 }): string {
   const {
     runtime,
@@ -493,6 +507,7 @@ function buildMarkdownReport(params: {
     sizeRows,
     sortedTasks,
     fastestHz,
+    schemaSizeRows,
   } = params;
 
   const lines: string[] = [
@@ -548,6 +563,26 @@ function buildMarkdownReport(params: {
     lines.push("| " + cells.join(" | ") + " |");
   }
 
+  lines.push("", "### Schema-shared encoded size comparison", "");
+  lines.push(
+    "| payload | twilic bound (bytes) | protobuf (bytes) | avro (bytes) | vs protobuf | vs avro |",
+  );
+  lines.push("| --- | ---: | ---: | ---: | ---: | ---: |");
+  for (const row of schemaSizeRows) {
+    lines.push(
+      "| " +
+        [
+          row.payload,
+          formatBytes(row.twilicBound),
+          formatBytes(row.protobuf),
+          formatBytes(row.avro),
+          formatReduction(row.twilicBound, row.protobuf),
+          formatReduction(row.twilicBound, row.avro),
+        ].join(" | ") +
+        " |",
+    );
+  }
+
   lines.push("", "### Throughput (sorted by ops/s)", "", "");
   lines.push("| task | ops/s | ns/op | relative | rme |");
   lines.push("| --- | ---: | ---: | ---: | ---: |");
@@ -584,6 +619,35 @@ async function run(): Promise<void> {
   const batchHomogeneousJson = dataset.batchHomogeneousJson;
   const batchMixedJson = dataset.batchMixedJson;
   const patchSession = dataset.patchSession;
+  const schemaUserRecords = makeSchemaUserRecordBatch();
+  const schemaUserRecordsTwilic: TwilicValue[] = [];
+  for (const record of schemaUserRecords) {
+    const twilicRecord: Record<string, TwilicValue> = {
+      id: record.id,
+      role: record.role,
+      active: record.active,
+    };
+    if (record.age !== undefined) {
+      twilicRecord.age = record.age;
+    }
+    schemaUserRecordsTwilic.push(twilicRecord);
+  }
+  const schemaUserRecordSchema: Schema = {
+    schemaId: 7,
+    name: "UserRecord",
+    fields: [
+      { number: 1, name: "id", logicalType: "u32", required: true },
+      { number: 2, name: "role", logicalType: "string", required: true },
+      { number: 3, name: "age", logicalType: "u32", required: false },
+      { number: 4, name: "active", logicalType: "bool", required: true },
+    ],
+  };
+  const encodeTwilicBoundStream = (): Uint8Array[] => {
+    const encoder = createSessionEncoder();
+    return schemaUserRecordsTwilic.map((record) =>
+      encoder.encodeWithSchema(schemaUserRecordSchema, record),
+    );
+  };
 
   const twilicEncodedSingle = encode(dataset.singleSmall);
   const twilicEncodedBatchHomogeneous = encodeBatch(dataset.batchHomogeneous);
@@ -633,6 +697,9 @@ async function run(): Promise<void> {
   );
   const jsonBatchMixedText = new TextDecoder().decode(jsonEncodedBatchMixed);
   const twilicEncodedPatchSessionFirst = encode(patchSession.first);
+  const twilicBoundSchemaStream = encodeTwilicBoundStream();
+  const protobufSchemaStream = encodeProtobufStream(schemaUserRecords);
+  const avroSchemaStream = encodeAvroStream(schemaUserRecords);
 
   const sessionEncoder = createSessionEncoder({
     enableStatePatch: true,
@@ -988,6 +1055,17 @@ async function run(): Promise<void> {
     }
   }
 
+  bench
+    .add("twilic encode schema-user-record-256 (bound stream)", () => {
+      encodeTwilicBoundStream();
+    })
+    .add("protobuf encode schema-user-record-256 (stream)", () => {
+      encodeProtobufStream(schemaUserRecords);
+    })
+    .add("avro encode schema-user-record-256 (stream)", () => {
+      encodeAvroStream(schemaUserRecords);
+    });
+
   await bench.run();
 
   const sizeTableHead = [
@@ -1051,6 +1129,41 @@ async function run(): Promise<void> {
         .byteLength,
     },
   ];
+
+  const schemaSizeRows: SchemaSizeRowData[] = [
+    {
+      payload: "schema-user-record-256 (shared schema stream)",
+      twilicBound: twilicBoundSchemaStream.reduce(
+        (total, chunk) => total + chunk.byteLength,
+        0,
+      ),
+      protobuf: protobufSchemaStream.byteLength,
+      avro: avroSchemaStream.byteLength,
+    },
+  ];
+
+  const schemaSizeTable = new Table({
+    head: [
+      "payload",
+      "twilic bound (bytes)",
+      "protobuf (bytes)",
+      "avro (bytes)",
+      "vs protobuf",
+      "vs avro",
+    ],
+    style: { head: [], border: [] },
+  });
+
+  for (const row of schemaSizeRows) {
+    schemaSizeTable.push([
+      row.payload,
+      formatBytes(row.twilicBound),
+      formatBytes(row.protobuf),
+      formatBytes(row.avro),
+      formatReduction(row.twilicBound, row.protobuf),
+      formatReduction(row.twilicBound, row.avro),
+    ]);
+  }
 
   for (const row of sizeRows) {
     const tableRow = [
@@ -1119,6 +1232,9 @@ async function run(): Promise<void> {
   console.log("encoded size comparison");
   console.log(sizeTable.toString());
   console.log("");
+  console.log("schema-shared encoded size comparison");
+  console.log(schemaSizeTable.toString());
+  console.log("");
   console.log("results");
   console.log(resultTable.toString());
 
@@ -1128,6 +1244,7 @@ async function run(): Promise<void> {
       options,
       includeJsonBaseline,
       sizeRows,
+      schemaSizeRows,
       sortedTasks,
       fastestHz,
     });
@@ -1156,6 +1273,7 @@ async function run(): Promise<void> {
         bson: row.bson,
         json: row.json,
       })),
+      schemaSizes: schemaSizeRows,
     };
     fs.writeFileSync(options.jsonOut, `${JSON.stringify(payload, null, 2)}\n`);
   }

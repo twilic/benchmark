@@ -19,9 +19,11 @@
   },
   "dependencies": {
     "@msgpack/msgpack": "^3.1.3",
+    "avsc": "^5.7.9",
     "bson": "^7.2.0",
     "cbor-x": "^1.6.4",
     "cli-table3": "^0.6.5",
+    "protobufjs": "^7.4.0",
     "@twilic/core": "file:../twilic-js",
     "tinybench": "^2.9.0"
   },

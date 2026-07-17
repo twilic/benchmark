@@ -48,7 +48,10 @@ pnpm bench -- --backend wasm --time-ms 2000 --warmup-ms 500
 - Raw transport-json fast path (`encodeTransportJson`, `encodeBatchTransportJson`, `decodeToTransportJson`)
 - JSON stringify/parse baseline for a comparable payload
 - Encoded payload size comparison (`twilic` vs MessagePack vs JSON)
+- Schema-shared stream size comparison (`twilic` Bound vs Protobuf vs Avro)
 - Pretty CLI tables for size and throughput output (`cli-table3`)
+
+The schema comparison uses the same 256 `UserRecord` values for all three formats. Schemas are assumed to be shared out of band, so Avro object-container headers and transport framing are deliberately excluded.
 
 ## Max speed tips
 
