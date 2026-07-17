@@ -633,12 +633,33 @@ async function run(): Promise<void> {
     schemaUserRecordsTwilic.push(twilicRecord);
   }
   const schemaUserRecordSchema: Schema = {
-    schemaId: 7,
-    name: "UserRecord",
+    schemaId: 42,
+    name: "UserRecordV1",
     fields: [
-      { number: 1, name: "id", logicalType: "u32", required: true },
-      { number: 2, name: "role", logicalType: "string", required: true },
-      { number: 3, name: "age", logicalType: "u32", required: false },
+      {
+        number: 1,
+        name: "id",
+        logicalType: "u32",
+        required: true,
+        min: 1,
+        max: 10_000_000,
+      },
+      {
+        number: 2,
+        name: "role",
+        logicalType: "string",
+        required: true,
+        enumValues: ["viewer", "editor", "admin"],
+      },
+      {
+        number: 3,
+        name: "age",
+        logicalType: "u8",
+        required: false,
+        min: 0,
+        max: 127,
+        defaultValue: 0,
+      },
       { number: 4, name: "active", logicalType: "bool", required: true },
     ],
   };

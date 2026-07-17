@@ -11,17 +11,17 @@ export interface UserRecord {
 const USER_RECORD_PROTO = `
 syntax = "proto3";
 
-message UserRecord {
+message UserRecordV1 {
   uint32 id = 1;
   string role = 2;
-  optional uint32 age = 3;
+  uint32 age = 3;
   bool active = 4;
 }
 `;
 
 const USER_RECORD_AVRO_SCHEMA = {
   type: "record",
-  name: "UserRecord",
+  name: "UserRecordV1",
   fields: [
     { name: "id", type: "int" },
     { name: "role", type: "string" },
@@ -32,7 +32,7 @@ const USER_RECORD_AVRO_SCHEMA = {
 
 const protobufType = protobuf
   .parse(USER_RECORD_PROTO)
-  .root.lookupType("UserRecord");
+  .root.lookupType("UserRecordV1");
 const avroType = avro.Type.forSchema(
   USER_RECORD_AVRO_SCHEMA as Parameters<typeof avro.Type.forSchema>[0],
 );
