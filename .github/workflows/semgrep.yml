@@ -18,4 +18,5 @@ jobs:
     uses: twilic/.github/.github/workflows/semgrep-reusable.yml@main
     with:
       profile: js
-    secrets: inherit
+    secrets:
+      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
