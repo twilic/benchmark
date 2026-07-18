@@ -44,32 +44,32 @@ jobs:
 
     steps:
       - name: Checkout benchmark
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: workspace/benchmark
           persist-credentials: false
 
       - name: Checkout twilic-js
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.repository_owner }}/twilic-js
           path: workspace/twilic-js
           persist-credentials: false
 
       - name: Checkout twilic-rust
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.repository_owner }}/twilic-rust
           path: workspace/twilic-rust
           persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        uses: pnpm/action-setup@v6
         with:
           version: 10.18.1
 
       - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: pnpm
@@ -81,7 +81,17 @@ jobs:
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
       - name: Install wasm-pack
-        uses: jetli/wasm-pack-action@0d096b08b4e5a7de8c28de67e11e945404e9eefa # v0.4.0
+        env:
+          WASM_PACK_VERSION: "0.13.0"
+        run: |
+          set -euo pipefail
+          archive="wasm-pack-v${WASM_PACK_VERSION}-x86_64-unknown-linux-musl"
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL "https://github.com/rustwasm/wasm-pack/releases/download/v${WASM_PACK_VERSION}/${archive}.tar.gz" \
+            | tar -xz -C /tmp
+          install -m 755 "/tmp/${archive}/wasm-pack" "$HOME/.local/bin/wasm-pack"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/wasm-pack" --version
 
       - name: Build twilic-js
         working-directory: workspace/twilic-js
