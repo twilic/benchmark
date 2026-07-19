@@ -56,12 +56,23 @@ jobs:
           path: workspace/twilic-js
           persist-credentials: false
 
-      - name: Checkout twilic-rust
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          repository: ${{ github.repository_owner }}/twilic-rust
-          path: workspace/twilic-rust
-          persist-credentials: false
+      - name: Resolve twilic-rust ref
+        id: twilic_rust_ref
+        run: |
+          ref=$(grep -v '^#' workspace/twilic-js/.github/twilic-rust-ref | grep -v '^[[:space:]]*$' | head -1)
+          test -n "$ref"
+          echo "value=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout twilic-rust (pinned, shallow)
+        run: |
+          set -euo pipefail
+          dest="${{ github.workspace }}/twilic-rust"
+          ref="${{ steps.twilic_rust_ref.outputs.value }}"
+          rm -rf "$dest"
+          git init "$dest"
+          git -C "$dest" remote add origin https://github.com/twilic/twilic-rust.git
+          git -C "$dest" fetch --depth 1 origin "$ref"
+          git -C "$dest" checkout --detach FETCH_HEAD
 
       - name: Setup pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -78,9 +89,11 @@ jobs:
             workspace/benchmark/pnpm-lock.yaml
 
       - name: Setup Rust
+        if: ${{ inputs.backend == 'wasm' }}
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
       - name: Install wasm-pack
+        if: ${{ inputs.backend == 'wasm' }}
         env:
           WASM_PACK_VERSION: "0.13.0"
         run: |
@@ -93,7 +106,16 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/wasm-pack" --version
 
-      - name: Build twilic-js
+      - name: Build twilic-js (napi)
+        if: ${{ inputs.backend == 'napi' }}
+        working-directory: workspace/twilic-js
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build:napi
+          pnpm build:ts
+
+      - name: Build twilic-js (wasm)
+        if: ${{ inputs.backend == 'wasm' }}
         working-directory: workspace/twilic-js
         run: |
           pnpm install --frozen-lockfile
