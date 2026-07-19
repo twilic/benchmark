@@ -22,6 +22,8 @@ import {
   encodeBatchCompactJson,
   encodeBatchDirect,
   encodeBatchTransportJson,
+  encodeBatchWithSchema,
+  encodeBoundStream,
   encodeCompact,
   encodeCompactJson,
   encodeDirect,
@@ -486,7 +488,8 @@ interface SizeRowData {
 
 interface SchemaSizeRowData {
   payload: string;
-  twilicBound: number;
+  twilicBoundStream: number;
+  twilicSchemaBatch: number;
   protobuf: number;
   avro: number;
 }
@@ -565,19 +568,22 @@ function buildMarkdownReport(params: {
 
   lines.push("", "### Schema-shared encoded size comparison", "");
   lines.push(
-    "| payload | twilic bound (bytes) | protobuf (bytes) | avro (bytes) | vs protobuf | vs avro |",
+    "| payload | twilic BOUND_STREAM (bytes) | twilic SCHEMA_BATCH (bytes) | protobuf stream (bytes) | avro stream (bytes) | bound vs protobuf | bound vs avro | batch vs protobuf | batch vs avro |",
   );
-  lines.push("| --- | ---: | ---: | ---: | ---: | ---: |");
+  lines.push("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
   for (const row of schemaSizeRows) {
     lines.push(
       "| " +
         [
           row.payload,
-          formatBytes(row.twilicBound),
+          formatBytes(row.twilicBoundStream),
+          formatBytes(row.twilicSchemaBatch),
           formatBytes(row.protobuf),
           formatBytes(row.avro),
-          formatReduction(row.twilicBound, row.protobuf),
-          formatReduction(row.twilicBound, row.avro),
+          formatReduction(row.twilicBoundStream, row.protobuf),
+          formatReduction(row.twilicBoundStream, row.avro),
+          formatReduction(row.twilicSchemaBatch, row.protobuf),
+          formatReduction(row.twilicSchemaBatch, row.avro),
         ].join(" | ") +
         " |",
     );
@@ -663,12 +669,10 @@ async function run(): Promise<void> {
       { number: 4, name: "active", logicalType: "bool", required: true },
     ],
   };
-  const encodeTwilicBoundStream = (): Uint8Array[] => {
-    const encoder = createSessionEncoder();
-    return schemaUserRecordsTwilic.map((record) =>
-      encoder.encodeWithSchema(schemaUserRecordSchema, record),
-    );
-  };
+  const encodeTwilicBoundStream = (): Uint8Array =>
+    encodeBoundStream(schemaUserRecordSchema, schemaUserRecordsTwilic);
+  const encodeTwilicSchemaBatch = (): Uint8Array =>
+    encodeBatchWithSchema(schemaUserRecordSchema, schemaUserRecordsTwilic);
 
   const twilicEncodedSingle = encode(dataset.singleSmall);
   const twilicEncodedBatchHomogeneous = encodeBatch(dataset.batchHomogeneous);
@@ -719,6 +723,7 @@ async function run(): Promise<void> {
   const jsonBatchMixedText = new TextDecoder().decode(jsonEncodedBatchMixed);
   const twilicEncodedPatchSessionFirst = encode(patchSession.first);
   const twilicBoundSchemaStream = encodeTwilicBoundStream();
+  const twilicSchemaBatch = encodeTwilicSchemaBatch();
   const protobufSchemaStream = encodeProtobufStream(schemaUserRecords);
   const avroSchemaStream = encodeAvroStream(schemaUserRecords);
 
@@ -1077,8 +1082,11 @@ async function run(): Promise<void> {
   }
 
   bench
-    .add("twilic encode schema-user-record-256 (bound stream)", () => {
+    .add("twilic encode schema-user-record-256 (BOUND_STREAM)", () => {
       encodeTwilicBoundStream();
+    })
+    .add("twilic encode schema-user-record-256 (SCHEMA_BATCH)", () => {
+      encodeTwilicSchemaBatch();
     })
     .add("protobuf encode schema-user-record-256 (stream)", () => {
       encodeProtobufStream(schemaUserRecords);
@@ -1153,11 +1161,9 @@ async function run(): Promise<void> {
 
   const schemaSizeRows: SchemaSizeRowData[] = [
     {
-      payload: "schema-user-record-256 (shared schema stream)",
-      twilicBound: twilicBoundSchemaStream.reduce(
-        (total, chunk) => total + chunk.byteLength,
-        0,
-      ),
+      payload: "schema-user-record-256 (schema shared OOB)",
+      twilicBoundStream: twilicBoundSchemaStream.byteLength,
+      twilicSchemaBatch: twilicSchemaBatch.byteLength,
       protobuf: protobufSchemaStream.byteLength,
       avro: avroSchemaStream.byteLength,
     },
@@ -1166,11 +1172,14 @@ async function run(): Promise<void> {
   const schemaSizeTable = new Table({
     head: [
       "payload",
-      "twilic bound (bytes)",
-      "protobuf (bytes)",
-      "avro (bytes)",
-      "vs protobuf",
-      "vs avro",
+      "twilic BOUND_STREAM (bytes)",
+      "twilic SCHEMA_BATCH (bytes)",
+      "protobuf stream (bytes)",
+      "avro stream (bytes)",
+      "bound vs protobuf",
+      "bound vs avro",
+      "batch vs protobuf",
+      "batch vs avro",
     ],
     style: { head: [], border: [] },
   });
@@ -1178,11 +1187,14 @@ async function run(): Promise<void> {
   for (const row of schemaSizeRows) {
     schemaSizeTable.push([
       row.payload,
-      formatBytes(row.twilicBound),
+      formatBytes(row.twilicBoundStream),
+      formatBytes(row.twilicSchemaBatch),
       formatBytes(row.protobuf),
       formatBytes(row.avro),
-      formatReduction(row.twilicBound, row.protobuf),
-      formatReduction(row.twilicBound, row.avro),
+      formatReduction(row.twilicBoundStream, row.protobuf),
+      formatReduction(row.twilicBoundStream, row.avro),
+      formatReduction(row.twilicSchemaBatch, row.protobuf),
+      formatReduction(row.twilicSchemaBatch, row.avro),
     ]);
   }
 

@@ -47,11 +47,17 @@ pnpm bench -- --backend wasm --time-ms 2000 --warmup-ms 500
 - Twilic session patch encode (`encodePatch`)
 - Raw transport-json fast path (`encodeTransportJson`, `encodeBatchTransportJson`, `decodeToTransportJson`)
 - JSON stringify/parse baseline for a comparable payload
-- Encoded payload size comparison (`twilic` vs MessagePack vs JSON)
-- Schema-shared stream size comparison (`twilic` Bound vs Protobuf vs Avro)
+- Encoded payload size comparison (`twilic` vs MessagePack vs CBOR vs BSON vs JSON)
+- Schema-shared size comparison (`BOUND_STREAM` / `SCHEMA_BATCH` vs Protobuf vs Avro raw streams)
 - Pretty CLI tables for size and throughput output (`cli-table3`)
 
-The schema comparison uses the same 256 `UserRecord` values for all three formats. Schemas are assumed to be shared out of band, so Avro object-container headers and transport framing are deliberately excluded.
+The schema comparison uses the same 256 `UserRecord` values for all formats. Schemas are assumed to be shared out of band, so Avro object-container headers and Protobuf length-prefix framing are deliberately excluded. Twilic measures `encodeBoundStream` and `encodeBatchWithSchema` (not per-message `encodeWithSchema`).
+
+Pinned website numbers live in [`results/pinned-snapshot.json`](results/pinned-snapshot.json). Regenerate with:
+
+```bash
+pnpm bench -- --backend napi --time-ms 1500 --warmup-ms 500 --json-out results/pinned-snapshot.json
+```
 
 ## Max speed tips
 
